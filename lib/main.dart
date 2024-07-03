@@ -1,125 +1,389 @@
 import 'package:flutter/material.dart';
+import 'dart:math';
 
 void main() {
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Netfloox',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+        primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: HomePage(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
+class HomePage extends StatelessWidget {
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          children: [
+            Image.network(
+              'https://t3.ftcdn.net/jpg/04/06/92/60/360_F_406926005_dGy1iIhhadwEGOTFJjw2q1ir7lrYjg3C.jpg',
+              height: 40,
+            ),
+            SizedBox(width: 10),
+            Text(
+              'Netfloox',
+              style: TextStyle(
+                fontFamily: 'FiraSans',
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Color(0xFF1E3A8A),
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SearchBar(),
+              SizedBox(height: 16),
+              TopFiveSection(),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.book),
+            label: 'Littérature',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.movie),
+            label: 'Films',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.tv),
+            label: 'Séries',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.book_online),
+            label: 'Mangas',
+          ),
+        ],
+        selectedItemColor: Color(0xFF1E3A8A),
+      ),
+    );
+  }
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class SearchBar extends StatelessWidget {
+  final TextEditingController _searchController = TextEditingController();
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _searchController,
+      decoration: InputDecoration(
+        labelText: 'Rechercher un loisir',
+        prefixIcon: Icon(Icons.search),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
+}
+
+class TopFiveSection extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionTitle(title: 'Top 5 des Films'),
+        TopFiveList(category: 'Films'),
+        SectionTitle(title: 'Top 5 des Livres'),
+        TopFiveList(category: 'Livres'),
+        SectionTitle(title: 'Top 5 des Mangas'),
+        TopFiveList(category: 'Mangas'),
+        SectionTitle(title: 'Top 5 des Séries'),
+        TopFiveList(category: 'Séries'),
+        SectionTitle(title: 'Top 5 des Bandes Dessinées'),
+        TopFiveList(category: 'Bandes Dessinées'),
+      ],
+    );
+  }
+}
+
+class SectionTitle extends StatelessWidget {
+  final String title;
+
+  const SectionTitle({Key? key, required this.title}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontFamily: 'FiraSans',
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+}
+
+class TopFiveList extends StatelessWidget {
+  final String category;
+
+  const TopFiveList({Key? key, required this.category}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 200,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: 5,
+        itemBuilder: (context, index) {
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DetailPage(
+                    category: category,
+                    index: index,
+                  ),
+                ),
+              );
+            },
+            child: TopFiveCard(category: category, index: index),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class TopFiveCard extends StatelessWidget {
+  final String category;
+  final int index;
+
+  const TopFiveCard({Key? key, required this.category, required this.index}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final random = Random();
+    final int rating = 1 + random.nextInt(5);
+
+    return Container(
+      width: 150,
+      margin: EdgeInsets.symmetric(horizontal: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Image.network(
+            _getImageUrlForCategory(category),
+            height: 100,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
+          SizedBox(height: 8),
+          Text(
+            '$category $index',
+            style: TextStyle(
+              fontFamily: 'FiraSans',
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            'Description brève du $category $index.',
+            style: TextStyle(
+              fontFamily: 'Numans',
+            ),
+          ),
+          Row(
+            children: List.generate(5, (i) {
+              return Icon(
+                Icons.star,
+                color: i < rating ? Colors.amber : Colors.grey[400],
+                size: 16,
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getImageUrlForCategory(String category) {
+    switch (category) {
+      case 'Films':
+        return 'https://t3.ftcdn.net/jpg/05/90/75/40/360_F_590754013_CoFRYEcAmLREfB3k8vjzuyStsDbMAnqC.jpg';
+      case 'Livres':
+        return 'https://t4.ftcdn.net/jpg/02/36/41/51/360_F_236415197_aHuHuTomAaURIX0UKAGCdWkOGTO4qBfH.jpg';
+      case 'Mangas':
+        return 'https://upload.wikimedia.org/wikipedia/fr/9/96/Logo-mangaschaine2022.png';
+      case 'Séries':
+        return 'https://t4.ftcdn.net/jpg/02/36/41/51/360_F_236415197_aHuHuTomAaURIX0UKAGCdWkOGTO4qBfH.jpg';
+      case 'Bandes Dessinées':
+        return 'https://d1csarkz8obe9u.cloudfront.net/posterpreviews/comic-logo-design-template-fecbd8dc44fc05424ad9ed9408b43d3e_screen.jpg?ts=1679878648';
+      default:
+        return '';
+    }
+  }
+}
+
+class DetailPage extends StatefulWidget {
+  final String category;
+  final int index;
+
+  const DetailPage({Key? key, required this.category, required this.index}) : super(key: key);
+
+  @override
+  _DetailPageState createState() => _DetailPageState();
+}
+
+class _DetailPageState extends State<DetailPage> {
+  late int currentRating;
+  late int userRating;
+
+  @override
+  void initState() {
+    super.initState();
+    final random = Random();
+    currentRating = 1 + random.nextInt(5);
+    userRating = currentRating;
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: Text('Détails'),
+        backgroundColor: Color(0xFF1E3A8A),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(16),
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Image.network(
+              _getImageUrlForCategory(widget.category),
+              height: 300,
+              width: double.infinity,
+              fit: BoxFit.cover,
             ),
+            SizedBox(height: 16),
             Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+              '${widget.category} ${widget.index}',
+              style: TextStyle(
+                fontFamily: 'FiraSans',
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Description détaillée du ${widget.category} ${widget.index}. Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+              style: TextStyle(
+                fontFamily: 'Numans',
+                fontSize: 16,
+              ),
+            ),
+            SizedBox(height: 16),
+            Row(
+              children: [
+                Text(
+                  'Note actuelle : ',
+                  style: TextStyle(
+                    fontFamily: 'FiraSans',
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Row(
+                  children: List.generate(5, (i) {
+                    return Icon(
+                      Icons.star,
+                      color: i < currentRating ? Colors.amber : Colors.grey[400],
+                      size: 24,
+                    );
+                  }),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Votre note :',
+              style: TextStyle(
+                fontFamily: 'FiraSans',
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8),
+            Row(
+              children: List.generate(5, (index) {
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      userRating = index + 1;
+                    });
+                  },
+                  child: Icon(
+                    Icons.star,
+                    color: index < userRating ? Colors.amber : Colors.grey[400],
+                    size: 40,
+                  ),
+                );
+              }),
+            ),
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${widget.category} ${widget.index} ajouté aux favoris.'),
+                    duration: Duration(seconds: 2),
+
+                    
+                  ),
+                );
+              },
+              child: Text('Ajouter aux favoris'),
+            
+              
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
+  }
+
+  String _getImageUrlForCategory(String category) {
+    switch (category) {
+      case 'Films':
+        return 'https://t3.ftcdn.net/jpg/05/90/75/40/360_F_590754013_CoFRYEcAmLREfB3k8vjzuyStsDbMAnqC.jpg';
+      case 'Livres':
+        return 'https://t4.ftcdn.net/jpg/02/36/41/51/360_F_236415197_aHuHuTomAaURIX0UKAGCdWkOGTO4qBfH.jpg';
+      case 'Mangas':
+        return 'https://upload.wikimedia.org/wikipedia/fr/9/96/Logo-mangaschaine2022.png';
+      case 'Séries':
+        return 'https://t4.ftcdn.net/jpg/02/36/41/51/360_F_236415197_aHuHuTomAaURIX0UKAGCdWkOGTO4qBfH.jpg';
+      case 'Bandes Dessinées':
+        return 'https://d1csarkz8obe9u.cloudfront.net/posterpreviews/comic-logo-design-template-fecbd8dc44fc05424ad9ed9408b43d3e_screen.jpg?ts=1679878648';
+      default:
+        return '';
+    }
   }
 }

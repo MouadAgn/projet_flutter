@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:intl/intl.dart';
 
 void main() {
   runApp(MyApp());
@@ -19,7 +20,14 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  int currentIndex = 1; // Définit l'onglet actif. 1 correspond à 'Films'.
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -50,7 +58,16 @@ class HomePage extends StatelessWidget {
             children: [
               SearchBar(),
               SizedBox(height: 16),
-              TopFiveSection(),
+              // Affiche le contenu en fonction de l'onglet sélectionné
+              currentIndex == 0
+                  ? TopFiveSection(category: 'Livres')
+                  : currentIndex == 1
+                      ? TopFiveSection(category: 'Films')
+                      : currentIndex == 2
+                          ? TopFiveSection(category: 'Séries')
+                          : currentIndex == 3
+                              ? TopFiveSection(category: 'Mangas')
+                              : TopFiveSection(category: 'Bandes Dessinées'),
             ],
           ),
         ),
@@ -59,7 +76,7 @@ class HomePage extends StatelessWidget {
         items: [
           BottomNavigationBarItem(
             icon: Icon(Icons.book),
-            label: 'Littérature',
+            label: 'Livres',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.movie),
@@ -73,8 +90,31 @@ class HomePage extends StatelessWidget {
             icon: Icon(Icons.book_online),
             label: 'Mangas',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bookmark_border),
+            label: 'Bandes Dessinées',
+          ),
         ],
         selectedItemColor: Color(0xFF1E3A8A),
+        unselectedItemColor: Colors.grey[400],
+        selectedFontSize: 18,
+        unselectedFontSize: 18,
+        showUnselectedLabels: true,
+        showSelectedLabels: true,
+        selectedLabelStyle: TextStyle(
+          fontFamily: 'FiraSans',
+          color: Colors.white,
+        ),
+        unselectedLabelStyle: TextStyle(
+          fontFamily: 'FiraSans',
+          color: const Color.fromARGB(255, 227, 26, 26),
+        ),
+        currentIndex: currentIndex,
+        onTap: (index) {
+          setState(() {
+            currentIndex = index; // Met à jour l'onglet actif
+          });
+        },
       ),
     );
   }
@@ -98,22 +138,52 @@ class SearchBar extends StatelessWidget {
   }
 }
 
-class TopFiveSection extends StatelessWidget {
+class TopFiveSection extends StatefulWidget {
+  final String category;
+
+  const TopFiveSection({Key? key, required this.category}) : super(key: key);
+
+  @override
+  _TopFiveSectionState createState() => _TopFiveSectionState();
+}
+
+class _TopFiveSectionState extends State<TopFiveSection> {
+  String sortBy = 'alphabetical';
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(title: 'Top 5 des Films'),
-        TopFiveList(category: 'Films'),
-        SectionTitle(title: 'Top 5 des Livres'),
-        TopFiveList(category: 'Livres'),
-        SectionTitle(title: 'Top 5 des Mangas'),
-        TopFiveList(category: 'Mangas'),
-        SectionTitle(title: 'Top 5 des Séries'),
-        TopFiveList(category: 'Séries'),
-        SectionTitle(title: 'Top 5 des Bandes Dessinées'),
-        TopFiveList(category: 'Bandes Dessinées'),
+        SectionTitle(title: 'Top 5 des ${widget.category}'),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Text('Trier par: '),
+            DropdownButton<String>(
+              value: sortBy,
+              onChanged: (String? newValue) {
+                setState(() {
+                  sortBy = newValue!;
+                });
+              },
+              items: <String>['alphabetical', 'date', 'rating']
+                  .map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(
+                    value == 'alphabetical'
+                        ? 'alphabétique'
+                        : value == 'date'
+                            ? 'date'
+                            : 'note',
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+        TopFiveList(category: widget.category, sortBy: sortBy),
       ],
     );
   }
@@ -142,17 +212,42 @@ class SectionTitle extends StatelessWidget {
 
 class TopFiveList extends StatelessWidget {
   final String category;
+  final String sortBy;
 
-  const TopFiveList({Key? key, required this.category}) : super(key: key);
+  const TopFiveList({Key? key, required this.category, required this.sortBy})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    List<Map<String, dynamic>> items = List.generate(5, (index) {
+      final random = Random();
+      return {
+        'index': index,
+        'name': '$category ${index + 1}',
+        'description': 'Description brève de $category ${index + 1}.',
+        'rating': 1 + random.nextInt(5),
+        'date': DateTime.now().subtract(Duration(days: random.nextInt(1000))),
+      };
+    });
+
+    items.sort((a, b) {
+      if (sortBy == 'alphabetical') {
+        return a['name'].compareTo(b['name']);
+      } else if (sortBy == 'date') {
+        return b['date'].compareTo(a['date']);
+      } else if (sortBy == 'rating') {
+        return b['rating'].compareTo(a['rating']);
+      }
+      return 0;
+    });
+
     return Container(
       height: 200,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: 5,
+        itemCount: items.length,
         itemBuilder: (context, index) {
+          final item = items[index];
           return GestureDetector(
             onTap: () {
               Navigator.push(
@@ -160,12 +255,23 @@ class TopFiveList extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (context) => DetailPage(
                     category: category,
-                    index: index,
+                    index: item['index'],
+                    name: item['name'],
+                    description: item['description'],
+                    initialRating: item['rating'], // Note initiale de l'élément
+                    date: item['date'],
                   ),
                 ),
               );
             },
-            child: TopFiveCard(category: category, index: index),
+            child: TopFiveCard(
+              category: category,
+              index: item['index'],
+              name: item['name'],
+              description: item['description'],
+              rating: item['rating'],
+              date: item['date'],
+            ),
           );
         },
       ),
@@ -176,13 +282,24 @@ class TopFiveList extends StatelessWidget {
 class TopFiveCard extends StatelessWidget {
   final String category;
   final int index;
+  final String name;
+  final String description;
+  final int rating;
+  final DateTime date;
 
-  const TopFiveCard({Key? key, required this.category, required this.index}) : super(key: key);
+  const TopFiveCard({
+    Key? key,
+    required this.category,
+    required this.index,
+    required this.name,
+    required this.description,
+    required this.rating,
+    required this.date,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final random = Random();
-    final int rating = 1 + random.nextInt(5);
+    final DateFormat formatter = DateFormat('dd/MM/yyyy');
 
     return Container(
       width: 150,
@@ -198,26 +315,39 @@ class TopFiveCard extends StatelessWidget {
           ),
           SizedBox(height: 8),
           Text(
-            '$category $index',
+            name,
             style: TextStyle(
               fontFamily: 'FiraSans',
               fontWeight: FontWeight.bold,
             ),
           ),
-          Text(
-            'Description brève du $category $index.',
-            style: TextStyle(
-              fontFamily: 'Numans',
+          Expanded(
+            child: Text(
+              description,
+              style: TextStyle(
+                fontFamily: 'Numans',
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
             ),
           ),
           Row(
-            children: List.generate(5, (i) {
+            children: List.generate(5, (index) {
               return Icon(
-                Icons.star,
-                color: i < rating ? Colors.amber : Colors.grey[400],
+                index < rating ? Icons.star : Icons.star_border,
+                color: index < rating ? Colors.amber : Colors.grey,
                 size: 16,
               );
             }),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'Date de sortie: ${formatter.format(date)}',
+            style: TextStyle(
+              fontFamily: 'Numans',
+              fontSize: 12,
+              color: Colors.grey,
+            ),
           ),
         ],
       ),
@@ -245,56 +375,58 @@ class TopFiveCard extends StatelessWidget {
 class DetailPage extends StatefulWidget {
   final String category;
   final int index;
+  final String name;
+  final String description;
+  final int initialRating; // Note initiale de l'élément
+  final DateTime date;
 
-  const DetailPage({Key? key, required this.category, required this.index}) : super(key: key);
+  const DetailPage({
+    Key? key,
+    required this.category,
+    required this.index,
+    required this.name,
+    required this.description,
+    required this.initialRating,
+    required this.date,
+  }) : super(key: key);
 
   @override
   _DetailPageState createState() => _DetailPageState();
 }
 
 class _DetailPageState extends State<DetailPage> {
-  late int currentRating;
-  late int userRating;
+  late int _rating; // Variable pour stocker la note choisie par l'utilisateur
+  bool isFavorited = false;
 
   @override
   void initState() {
     super.initState();
-    final random = Random();
-    currentRating = 1 + random.nextInt(5);
-    userRating = currentRating;
+    _rating = widget.initialRating; // Initialise la note avec la valeur initiale
   }
 
   @override
   Widget build(BuildContext context) {
+    final DateFormat formatter = DateFormat('dd/MM/yyyy');
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Détails'),
+        title: Text(widget.name),
         backgroundColor: Color(0xFF1E3A8A),
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Image.network(
               _getImageUrlForCategory(widget.category),
-              height: 300,
+              height: 200,
               width: double.infinity,
               fit: BoxFit.cover,
             ),
             SizedBox(height: 16),
             Text(
-              '${widget.category} ${widget.index}',
-              style: TextStyle(
-                fontFamily: 'FiraSans',
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Description détaillée du ${widget.category} ${widget.index}. Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+              widget.description,
               style: TextStyle(
                 fontFamily: 'Numans',
                 fontSize: 16,
@@ -304,65 +436,56 @@ class _DetailPageState extends State<DetailPage> {
             Row(
               children: [
                 Text(
-                  'Note actuelle : ',
+                  'Votre note: ',
                   style: TextStyle(
                     fontFamily: 'FiraSans',
-                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Row(
-                  children: List.generate(5, (i) {
-                    return Icon(
-                      Icons.star,
-                      color: i < currentRating ? Colors.amber : Colors.grey[400],
-                      size: 24,
+                  children: List.generate(5, (index) {
+                    return IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _rating = index + 1; // Met à jour la note sélectionnée
+                        });
+                      },
+                      icon: Icon(
+                        index < _rating ? Icons.star : Icons.star_border,
+                        color: index < _rating ? Colors.amber : Colors.grey,
+                        size: 24,
+                      ),
                     );
                   }),
                 ),
               ],
             ),
-            SizedBox(height: 16),
-            Text(
-              'Votre note :',
-              style: TextStyle(
-                fontFamily: 'FiraSans',
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
             SizedBox(height: 8),
-            Row(
-              children: List.generate(5, (index) {
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      userRating = index + 1;
-                    });
-                  },
-                  child: Icon(
-                    Icons.star,
-                    color: index < userRating ? Colors.amber : Colors.grey[400],
-                    size: 40,
-                  ),
-                );
-              }),
-            ),
-            SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${widget.category} ${widget.index} ajouté aux favoris.'),
-                    duration: Duration(seconds: 2),
-
-                    
-                  ),
-                );
+                setState(() {
+                  isFavorited = !isFavorited;
+                });
+                // Ajouter la logique pour ajouter aux favoris ici
               },
-              child: Text('Ajouter aux favoris'),
-            
-              
+              child: Text(
+                isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris',
+                style: TextStyle(
+                  fontFamily: 'FiraSans',
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isFavorited ? Colors.grey : Color(0xFF1E3A8A),
+              ),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Date de sortie: ${formatter.format(widget.date)}',
+              style: TextStyle(
+                fontFamily: 'Numans',
+                fontSize: 14,
+                color: Colors.grey,
+              ),
             ),
           ],
         ),

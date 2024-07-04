@@ -1,0 +1,98 @@
+@override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Ajouter un loisir'),
+        backgroundColor: Color(0xFF1E3A8A),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _dateController,
+                decoration: InputDecoration(
+                  labelText: 'Catégorie',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer une catégorie';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _titleController,
+                decoration: InputDecoration(
+                  labelText: 'Titre',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer un titre';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _typeController,
+                decoration: InputDecoration(
+                  labelText: 'Type',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer un type';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _dateController,
+                decoration: InputDecoration(
+                  labelText: 'Date de sortie',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer une date de sortie';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) {
+                    final newLeisure = {
+                      'index': Random().nextInt(1000), // Génère un ID aléatoire
+                      'name': _titleController.text,
+                      'description': _descriptionController.text,
+                      'rating': Random().nextInt(5) + 1,
+                      'date': DateTime.parse(_dateController.text),
+                    };
+
+                    widget.onAdd(newLeisure); // Appelle la fonction onAdd pour ajouter le loisir
+
+                    Navigator.pop(context); // Retourne à la page précédente
+                  }
+                },
+                child: Text('Enregistrer'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF806491),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

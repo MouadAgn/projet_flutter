@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:math';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:intl/intl.dart';
 
 void main() {
@@ -26,7 +27,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int currentIndex = 1; // Définit l'onglet actif. 1 correspond à 'Films'.
+  int currentIndex = 1;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +49,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-        backgroundColor: Color(0xFF1E3A8A), 
+        backgroundColor: Color(0xFF1E3A8A),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -58,16 +59,7 @@ class _HomePageState extends State<HomePage> {
             children: [
               SearchBar(),
               SizedBox(height: 16),
-              // Affiche le contenu en fonction de l'onglet sélectionné
-              currentIndex == 0
-                  ? TopFiveSection(category: 'Livres')
-                  : currentIndex == 1
-                      ? TopFiveSection(category: 'Films')
-                      : currentIndex == 2
-                          ? TopFiveSection(category: 'Séries')
-                          : currentIndex == 3
-                              ? TopFiveSection(category: 'Mangas')
-                              : TopFiveSection(category: 'Bandes Dessinées'),
+              TopFiveSection(category: _getCategoryName(currentIndex)),
             ],
           ),
         ),
@@ -84,7 +76,7 @@ class _HomePageState extends State<HomePage> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.tv),
-            label: 'Séries',
+            label: 'Series',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.book_online),
@@ -112,11 +104,28 @@ class _HomePageState extends State<HomePage> {
         currentIndex: currentIndex,
         onTap: (index) {
           setState(() {
-            currentIndex = index; // Met à jour l'onglet actif
+            currentIndex = index;
           });
         },
       ),
     );
+  }
+
+  String _getCategoryName(int index) {
+    switch (index) {
+      case 0:
+        return 'Livres';
+      case 1:
+        return 'Films';
+      case 2:
+        return 'Sries';
+      case 3:
+        return 'Mangas';
+      case 4:
+        return 'Bandes Dessinées';
+      default:
+        return 'Films';
+    }
   }
 }
 
@@ -138,6 +147,49 @@ class SearchBar extends StatelessWidget {
   }
 }
 
+class Leisure {
+  final int id;
+  final String name;
+  final String authorOrDirector;
+  final String? date;
+  final int? nbrPages;
+  final Category category;
+
+  Leisure({
+    required this.id,
+    required this.name,
+    required this.authorOrDirector,
+    this.date,
+    this.nbrPages,
+    required this.category,
+  });
+
+  factory Leisure.fromJson(Map<String, dynamic> json) {
+    return Leisure(
+      id: json['id'],
+      name: json['name'],
+      authorOrDirector: json['authorOrDirector'],
+      date: json['date'],
+      nbrPages: json['nbrPages'],
+      category: Category.fromJson(json['category']),
+    );
+  }
+}
+
+class Category {
+  final int id;
+  final String name;
+
+  Category({required this.id, required this.name});
+
+  factory Category.fromJson(Map<String, dynamic> json) {
+    return Category(
+      id: json['id'],
+      name: json['name'],
+    );
+  }
+}
+
 class TopFiveSection extends StatefulWidget {
   final String category;
 
@@ -149,70 +201,49 @@ class TopFiveSection extends StatefulWidget {
 
 class _TopFiveSectionState extends State<TopFiveSection> {
   String sortBy = 'alphabetical';
-  List<Map<String, dynamic>> items = [];
+  List<Leisure> allLeisures = [];
+  List<Leisure> filteredLeisures = [];
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    items = _generateItems(widget.category);
+    fetchLeisures();
   }
 
-  List<Map<String, dynamic>> _generateItems(String category) {
-    List<Map<String, dynamic>> generatedItems = List.generate(5, (index) {
-      final random = Random();
-      String categoryName = _getCategoryDisplayName(category);
-      return {
-        'index': index,
-        'name': '$categoryName ${index + 1}',
-         'description': 'Description brève de $categoryName ${index + 1}.',
-        'rating': 1 + random.nextInt(5),
-        'date': DateTime.now().subtract(Duration(days: random.nextInt(1000))),
-      };
-    });
-
-    generatedItems.sort((a, b) {
-      if (sortBy == 'alphabetical') {
-        return a['name'].compareTo(b['name']);
-      } else if (sortBy == 'date') {
-        return b['date'].compareTo(a['date']);
-      } else if (sortBy == 'rating') {
-        return b['rating'].compareTo(a['rating']);
-      }
-      return 0;
-    });
-
-    return generatedItems;
+  @override
+  void didUpdateWidget(TopFiveSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.category != widget.category) {
+      filterLeisures();
+    }
   }
 
-  void _addItem(Map<String, dynamic> newItem) {
-  setState(() {
-    items.add(newItem);
-    items.sort((a, b) {
-      if (sortBy == 'alphabetical') {
-        return a['name'].compareTo(b['name']);
-      } else if (sortBy == 'date') {
-        return b['date'].compareTo(a['date']);
-      } else if (sortBy == 'rating') {
-        return b['rating'].compareTo(a['rating']);
-      }
-      return 0;
+  Future<void> fetchLeisures() async {
+    setState(() {
+      isLoading = true;
     });
-  });
 
-  // Afficher un SnackBar pour indiquer que le loisir a été ajouté
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text('Le loisir "${newItem['name']}" a été ajouté avec succès!'),
-      duration: Duration(seconds: 3), // Durée d'affichage du SnackBar
-      action: SnackBarAction(
-        label: 'Fermer',
-        onPressed: () {
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        },
-      ),
-    ),
-  );
-}
+    final response = await http.get(Uri.parse('http://127.0.0.1:8000/api/leisures'));
+
+    if (response.statusCode == 200) {
+      final List<dynamic> jsonData = json.decode(response.body);
+      setState(() {
+        allLeisures = jsonData.map((json) => Leisure.fromJson(json)).toList();
+        filterLeisures();
+        isLoading = false;
+      });
+    } else {
+      throw Exception('Failed to load leisures');
+    }
+  }
+
+  void filterLeisures() {
+    filteredLeisures = allLeisures
+        .where((leisure) => leisure.category.name.toLowerCase() == widget.category.toLowerCase())
+        .toList();
+    _sortLeisures();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -229,16 +260,7 @@ class _TopFiveSectionState extends State<TopFiveSection> {
               onChanged: (String? newValue) {
                 setState(() {
                   sortBy = newValue!;
-                  items.sort((a, b) {
-                    if (sortBy == 'alphabetical') {
-                      return a['name'].compareTo(b['name']);
-                    } else if (sortBy == 'date') {
-                      return b['date'].compareTo(a['date']);
-                    } else if (sortBy == 'rating') {
-                      return b['rating'].compareTo(a['rating']);
-                    }
-                    return 0;
-                  });
+                  _sortLeisures();
                 });
               },
               items: <String>['alphabetical', 'date', 'rating']
@@ -257,43 +279,26 @@ class _TopFiveSectionState extends State<TopFiveSection> {
             ),
           ],
         ),
-        TopFiveList(category: widget.category, items: items),
-        SizedBox(height: 16),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => AddLeisureForm(category: widget.category, onAdd: _addItem),
-              ),
-            );
-          },
-          child: Text('Ajouter un loisir'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF806491),
-          ),
-        ),
+        isLoading
+            ? CircularProgressIndicator()
+            : TopFiveList(leisures: filteredLeisures.take(5).toList()),
       ],
     );
   }
-}
 
- String _getCategoryDisplayName(String category) {
-    switch (category) {
-      case 'Films':
-        return 'Film';
-      case 'Livres':
-        return 'Livre';
-      case 'Mangas':
-        return 'Manga';
-      case 'Séries':
-        return 'Série';
-      case 'Bandes Dessinées':
-        return 'Bande Dessinée';
-      default:
-        return 'Loisir';
-    }
+  void _sortLeisures() {
+    filteredLeisures.sort((a, b) {
+      if (sortBy == 'alphabetical') {
+        return a.name.compareTo(b.name);
+      } else if (sortBy == 'date') {
+        return (b.date ?? '').compareTo(a.date ?? '');
+      }
+      // Pour le tri par note, nous devrons ajouter un champ 'rating' à notre modèle Leisure
+      return 0;
+    });
+    setState(() {});
   }
+}
 
 class SectionTitle extends StatelessWidget {
   final String title;
@@ -317,11 +322,9 @@ class SectionTitle extends StatelessWidget {
 }
 
 class TopFiveList extends StatelessWidget {
-  final String category;
-  final List<Map<String, dynamic>> items;
+  final List<Leisure> leisures;
 
-  const TopFiveList({Key? key, required this.category, required this.items})
-      : super(key: key);
+  const TopFiveList({Key? key, required this.leisures}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -329,32 +332,32 @@ class TopFiveList extends StatelessWidget {
       height: 200,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: items.length,
+        itemCount: leisures.length,
         itemBuilder: (context, index) {
-          final item = items[index];
+          final leisure = leisures[index];
           return GestureDetector(
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => DetailPage(
-                    category: category,
-                    index: item['index'],
-                    name: item['name'],
-                    description: item['description'],
-                    initialRating: item['rating'], // Note initiale de l'élément
-                    date: item['date'],
+                    category: leisure.category.name,
+                    index: index,
+                    name: leisure.name,
+                    description: leisure.authorOrDirector,
+                    initialRating: 0, // Vous devrez ajouter un champ 'rating' à votre modèle Leisure
+                    date: leisure.date != null ? DateTime.parse(leisure.date!) : DateTime.now(),
                   ),
                 ),
               );
             },
             child: TopFiveCard(
-              category: category,
-              index: item['index'],
-              name: item['name'],
-              description: item['description'],
-              rating: item['rating'],
-              date: item['date'],
+              category: leisure.category.name,
+              index: index,
+              name: leisure.name,
+              description: leisure.authorOrDirector,
+              rating: 0, // Vous devrez ajouter un champ 'rating' à votre modèle Leisure
+              date: leisure.date != null ? DateTime.parse(leisure.date!) : DateTime.now(),
             ),
           );
         },
@@ -446,7 +449,7 @@ class TopFiveCard extends StatelessWidget {
         return 'https://t4.ftcdn.net/jpg/02/36/41/51/360_F_236415197_aHuHuTomAaURIX0UKAGCdWkOGTO4qBfH.jpg';
       case 'Mangas':
         return 'https://upload.wikimedia.org/wikipedia/fr/9/96/Logo-mangaschaine2022.png';
-      case 'Séries':
+      case 'Series':
         return 'https://t4.ftcdn.net/jpg/02/36/41/51/360_F_236415197_aHuHuTomAaURIX0UKAGCdWkOGTO4qBfH.jpg';
       case 'Bandes Dessinées':
         return 'https://d1csarkz8obe9u.cloudfront.net/posterpreviews/comic-logo-design-template-fecbd8dc44fc05424ad9ed9408b43d3e_screen.jpg?ts=1679878648';
@@ -461,7 +464,7 @@ class DetailPage extends StatefulWidget {
   final int index;
   final String name;
   final String description;
-  final int initialRating; // Note initiale de l'élément
+  final int initialRating;
   final DateTime date;
 
   const DetailPage({
@@ -479,13 +482,13 @@ class DetailPage extends StatefulWidget {
 }
 
 class _DetailPageState extends State<DetailPage> {
-  late int _rating; // Variable pour stocker la note choisie par l'utilisateur
+  late int _rating;
   bool isFavorited = false;
 
   @override
   void initState() {
     super.initState();
-    _rating = widget.initialRating; // Initialise la note avec la valeur initiale
+    _rating = widget.initialRating;
   }
 
   @override
@@ -497,85 +500,89 @@ class _DetailPageState extends State<DetailPage> {
         title: Text(widget.name),
         backgroundColor: Color(0xFF1E3A8A),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Image.network(
-              _getImageUrlForCategory(widget.category),
-              height: 200,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-            SizedBox(height: 16),
-            Text(
-              widget.description,
-              style: TextStyle(
-                fontFamily: 'Numans',
-                fontSize: 16,
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Image.network(
+                _getImageUrlForCategory(widget.category),
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
               ),
-            ),
-            SizedBox(height: 16),
-            Row(
-              children: [
-                Text(
-                  'Votre note: ',
+              SizedBox(height: 16),
+              Text(
+                widget.description,
+                style: TextStyle(
+                  fontFamily: 'Numans',
+                  fontSize: 16,
+                ),
+              ),
+              SizedBox(height: 16),
+              Row(
+                children: [
+                  Text(
+                    'Votre note: ',
+                    style: TextStyle(
+                      fontFamily: 'FiraSans',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Row(
+                    children: List.generate(5, (index) {
+                      return IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _rating = index + 1;
+                          });
+                        },
+                        icon: Icon(
+                          index < _rating ? Icons.star : Icons.star_border,
+                          color: index < _rating ? Colors.amber : Colors.grey,
+                          size: 24,
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+              ),
+              SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    isFavorited = !isFavorited;
+                  });
+                  // Ajouter la logique pour ajouter aux favoris ici
+                },
+                child: Text(
+                  isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris',
                   style: TextStyle(
                     fontFamily: 'FiraSans',
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                Row(
-                  children: List.generate(5, (index) {
-                    return IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _rating = index + 1; // Met à jour la note sélectionnée
-                        });
-                      },
-                      icon: Icon(
-                        index < _rating ? Icons.star : Icons.star_border,
-                        color: index < _rating ? Colors.amber : Colors.grey,
-                        size: 24,
-                      ),
-                    );
-                  }),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isFavorited ? Colors.grey : Color(0xFF1E3A8A),
                 ),
-              ],
-            ),
-            SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  isFavorited = !isFavorited;
-                });
-                // Ajouter la logique pour ajouter aux favoris ici
-              },
-              child: Text(
-                isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris',
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Date de sortie: ${formatter.format(widget.date)}',
                 style: TextStyle(
-                  fontFamily: 'FiraSans',
+                  fontFamily: 'Numans',
+                  fontSize: 14,
+                  color: Colors.grey,
                 ),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isFavorited ? Colors.grey : Color(0xFF806491),
-              ),
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Date de sortie: ${formatter.format(widget.date)}',
-              style: TextStyle(
-                fontFamily: 'Numans',
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
+
+
 
   String _getImageUrlForCategory(String category) {
     switch (category) {
@@ -585,7 +592,7 @@ class _DetailPageState extends State<DetailPage> {
         return 'https://t4.ftcdn.net/jpg/02/36/41/51/360_F_236415197_aHuHuTomAaURIX0UKAGCdWkOGTO4qBfH.jpg';
       case 'Mangas':
         return 'https://upload.wikimedia.org/wikipedia/fr/9/96/Logo-mangaschaine2022.png';
-      case 'Séries':
+      case 'Series':
         return 'https://t4.ftcdn.net/jpg/02/36/41/51/360_F_236415197_aHuHuTomAaURIX0UKAGCdWkOGTO4qBfH.jpg';
       case 'Bandes Dessinées':
         return 'https://d1csarkz8obe9u.cloudfront.net/posterpreviews/comic-logo-design-template-fecbd8dc44fc05424ad9ed9408b43d3e_screen.jpg?ts=1679878648';
@@ -593,129 +600,4 @@ class _DetailPageState extends State<DetailPage> {
         return '';
     }
   }
-}
-
-class AddLeisureForm extends StatefulWidget {
-  final String category;
-  final Function(Map<String, dynamic>) onAdd;
-
-  const AddLeisureForm({Key? key, required this.category, required this.onAdd})
-      : super(key: key);
-
-  @override
-  _AddLeisureFormState createState() => _AddLeisureFormState();
-}
-
-class _AddLeisureFormState extends State<AddLeisureForm> {
-  final _formKey = GlobalKey<FormState>();
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _typeController = TextEditingController();
-  final TextEditingController _dateController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _typeController.dispose();
-    _dateController.dispose();
-    super.dispose();
   }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Ajouter un loisir'),
-        backgroundColor: Color(0xFF1E3A8A),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextFormField(
-                controller: _dateController,
-                decoration: InputDecoration(
-                  labelText: 'Catégorie',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Veuillez entrer une catégorie';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 16),
-              TextFormField(
-                controller: _titleController,
-                decoration: InputDecoration(
-                  labelText: 'Titre',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Veuillez entrer un titre';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 16),
-              TextFormField(
-                controller: _typeController,
-                decoration: InputDecoration(
-                  labelText: 'Type',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Veuillez entrer un type';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 16),
-              TextFormField(
-                controller: _dateController,
-                decoration: InputDecoration(
-                  labelText: 'Date de sortie',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Veuillez entrer une date de sortie';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    final newLeisure = {
-                      'index': Random().nextInt(1000), // Génère un ID aléatoire
-                      'name': _titleController.text,
-                      'description': _descriptionController.text,
-                      'rating': Random().nextInt(5) + 1,
-                      'date': DateTime.parse(_dateController.text),
-                    };
-
-                    widget.onAdd(newLeisure); // Appelle la fonction onAdd pour ajouter le loisir
-
-                    Navigator.pop(context); // Retourne à la page précédente
-                  }
-                },
-                child: Text('Enregistrer'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF806491),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

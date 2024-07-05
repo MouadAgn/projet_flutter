@@ -306,7 +306,7 @@ class Leisure {
     required this.category,
   });
 
-  factory Leisure.fromJson( <String, dynamic> json) {
+  factory Leisure.fromJson(Map<String, dynamic> json) {
     return Leisure(
       id: json['id'],
       name: json['name'],
@@ -371,7 +371,7 @@ class _TopFiveSectionState extends State<TopFiveSection> {
     if (response.statusCode == 200) {
       final List<dynamic> jsonData = json.decode(response.body);
       setState(() {
-        allLeisures = jsonData.map((json) => Leisure.fromJson(json)).toList();
+        allLeisures = jsonData.map((json) => Leisure.fromJson(json as Map<String, dynamic>)).toList();
         filterLeisures();
         isLoading = false;
       });
@@ -506,6 +506,7 @@ class TopFiveList extends StatelessWidget {
     );
   }
 }
+
 
 class TopFiveCard extends StatelessWidget {
   final String category;
@@ -695,7 +696,7 @@ class _DetailPageState extends State<DetailPage> {
                   setState(() {
                     isFavorited = !isFavorited;
                   });
-                  // Ajouter la logique pour ajouter aux favoris ici
+                  // Add logic to add to favorites here
                 },
                 child: Text(
                   isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris',

@@ -59,6 +59,8 @@ class _HomePageState extends State<HomePage> {
             children: [
               SearchBar(),
               SizedBox(height: 16),
+              AddLeisureButton(),
+              SizedBox(height: 16),
               TopFiveSection(category: _getCategoryName(currentIndex)),
             ],
           ),
@@ -118,7 +120,7 @@ class _HomePageState extends State<HomePage> {
       case 1:
         return 'Films';
       case 2:
-        return 'Sries';
+        return 'Series';
       case 3:
         return 'Mangas';
       case 4:
@@ -147,6 +149,146 @@ class SearchBar extends StatelessWidget {
   }
 }
 
+class AddLeisureButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => AddLeisurePage()),
+        );
+      },
+      child: Text('Ajouter un loisir'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Color(0xFF1E3A8A),
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      ),
+    );
+  }
+}
+
+class AddLeisurePage extends StatefulWidget {
+  @override
+  _AddLeisurePageState createState() => _AddLeisurePageState();
+}
+
+class _AddLeisurePageState extends State<AddLeisurePage> {
+  final _formKey = GlobalKey<FormState>();
+  String? name;
+  String? category;
+  String? authorOrDirector;
+  String? date;
+  int? nbrPages;
+
+  final List<String> categories = ['Livres', 'Films', 'Series', 'Mangas', 'Bandes Dessinées'];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Ajouter un loisir'),
+        backgroundColor: Color(0xFF1E3A8A),
+      ),
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                decoration: InputDecoration(labelText: 'Nom'),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer un nom';
+                  }
+                  return null;
+                },
+                onSaved: (value) => name = value,
+              ),
+              DropdownButtonFormField(
+                decoration: InputDecoration(labelText: 'Catégorie'),
+                items: categories.map((String category) {
+                  return DropdownMenuItem(
+                    value: category,
+                    child: Text(category),
+                  );
+                }).toList(),
+                validator: (value) {
+                  if (value == null) {
+                    return 'Veuillez sélectionner une catégorie';
+                  }
+                  return null;
+                },
+                onChanged: (value) => category = value as String,
+              ),
+              TextFormField(
+                decoration: InputDecoration(labelText: 'Auteur/Réalisateur'),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez entrer un auteur ou réalisateur';
+                  }
+                  return null;
+                },
+                onSaved: (value) => authorOrDirector = value,
+              ),
+              TextFormField(
+                decoration: InputDecoration(labelText: 'Date (YYYY-MM-DD)'),
+                onSaved: (value) => date = value,
+              ),
+              TextFormField(
+                decoration: InputDecoration(labelText: 'Nombre de pages'),
+                keyboardType: TextInputType.number,
+                onSaved: (value) => nbrPages = int.tryParse(value ?? ''),
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _submitForm,
+                child: Text('Ajouter'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF1E3A8A),
+                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _submitForm() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+
+      final url = Uri.parse('http://127.0.0.1:8000/api/add-leisure');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'name': name,
+          'category_name': category,
+          'authorOrDirector': authorOrDirector,
+          'date': date,
+          'nbrPages': nbrPages,
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Loisir ajouté avec succès')),
+        );
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur lors de l\'ajout du loisir')),
+        );
+      }
+    }
+  }
+}
+
 class Leisure {
   final int id;
   final String name;
@@ -164,7 +306,7 @@ class Leisure {
     required this.category,
   });
 
-  factory Leisure.fromJson(Map<String, dynamic> json) {
+  factory Leisure.fromJson( <String, dynamic> json) {
     return Leisure(
       id: json['id'],
       name: json['name'],
@@ -293,7 +435,6 @@ class _TopFiveSectionState extends State<TopFiveSection> {
       } else if (sortBy == 'date') {
         return (b.date ?? '').compareTo(a.date ?? '');
       }
-      // Pour le tri par note, nous devrons ajouter un champ 'rating' à notre modèle Leisure
       return 0;
     });
     setState(() {});
@@ -345,7 +486,7 @@ class TopFiveList extends StatelessWidget {
                     index: index,
                     name: leisure.name,
                     description: leisure.authorOrDirector,
-                    initialRating: 0, // Vous devrez ajouter un champ 'rating' à votre modèle Leisure
+                    initialRating: 0,
                     date: leisure.date != null ? DateTime.parse(leisure.date!) : DateTime.now(),
                   ),
                 ),
@@ -356,7 +497,7 @@ class TopFiveList extends StatelessWidget {
               index: index,
               name: leisure.name,
               description: leisure.authorOrDirector,
-              rating: 0, // Vous devrez ajouter un champ 'rating' à votre modèle Leisure
+              rating: 0,
               date: leisure.date != null ? DateTime.parse(leisure.date!) : DateTime.now(),
             ),
           );
@@ -582,8 +723,6 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-
-
   String _getImageUrlForCategory(String category) {
     switch (category) {
       case 'Films':
@@ -600,4 +739,4 @@ class _DetailPageState extends State<DetailPage> {
         return '';
     }
   }
-  }
+}
